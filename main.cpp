@@ -833,6 +833,12 @@ public:
         m_waterTimer->setInterval(5000);
         connect(m_waterTimer, &QTimer::timeout, this, &DE1Simulator::sendWaterLevel);
 
+        // Auto-reconnect timer (every 5 seconds if disconnected)
+        m_reconnectTimer = new QTimer(this);
+        m_reconnectTimer->setInterval(5000);
+        connect(m_reconnectTimer, &QTimer::timeout, this, &DE1Simulator::tryAutoReconnect);
+        m_reconnectTimer->start(); // Always running, checks if reconnect needed
+
         // Check Pi connection on startup (after window shows)
         QTimer::singleShot(500, this, &DE1Simulator::checkPiOnStartup);
     }
@@ -1193,11 +1199,26 @@ private slots:
     }
 
     void onSocketError(QAbstractSocket::SocketError error) {
+        Q_UNUSED(error);
         log(QString("Socket error: %1").arg(m_socket->errorString()), "ERROR");
         m_statusLabel->setText("Connection failed: " + m_socket->errorString());
         m_statusLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #f44336;");
         m_connectBtn->setText("Connect");
         m_connectBtn->setEnabled(true);
+    }
+
+    void tryAutoReconnect() {
+        // Only try if not already connected or connecting
+        if (m_socket->state() == QAbstractSocket::UnconnectedState) {
+            QString host = m_hostEdit->text();
+            int port = m_portSpin->value();
+            if (!host.isEmpty()) {
+                log(QString("Auto-reconnecting to %1:%2...").arg(host).arg(port));
+                m_statusLabel->setText("Auto-reconnecting...");
+                m_statusLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #FF9800;");
+                m_socket->connectToHost(host, port);
+            }
+        }
     }
 
     void onDataReceived() {
@@ -1737,6 +1758,7 @@ private:
     QTimer *m_shotTimer = nullptr;
     QTimer *m_phaseTimer = nullptr;
     QTimer *m_waterTimer = nullptr;
+    QTimer *m_reconnectTimer = nullptr;
 
     // GUI - Connection
     QLineEdit *m_hostEdit = nullptr;
