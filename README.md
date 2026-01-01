@@ -1,5 +1,5 @@
 # DE1 BLE Simulator
-
+This does not work yet. I decided to postprone the project.
 A Bluetooth Low Energy simulator for the Decent Espresso DE1 machine. Test your DE1 apps without needing real hardware.
 
 ## Overview
